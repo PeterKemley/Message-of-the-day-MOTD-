@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "message-of-the-day-motd",
+	"version": "${version}",
+	"name": "Message of the day (MOTD)",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/message-of-the-day-motd/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"motd.MessageOfTheDayMOTD"
+		],
+		"client": [
+			"motd.client.MessageOfTheDayMOTDClient"
+		]
+	},
+	"mixins": [
+		"message-of-the-day-motd.mixins.json",
+		{
+			"config": "message-of-the-day-motd.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
