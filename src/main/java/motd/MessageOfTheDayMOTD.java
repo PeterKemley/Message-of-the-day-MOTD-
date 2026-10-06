@@ -6,12 +6,11 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,34 +34,22 @@ public class MessageOfTheDayMOTD implements ModInitializer {
 
         loadConfig();
 
-        ServerLifecycleEvents.SERVER_STARTED.register(
-                MessageOfTheDayMOTD::applyMotd
-        );
+        // Send the MOTD to a player when they join.
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+
+            if (config.enabled && config.message != null && !config.message.isBlank()) {
+                handler.getPlayer().sendSystemMessage(
+                        Component.literal(config.message)
+                );
+            }
+        });
 
         CommandRegistrationCallback.EVENT.register(
                 (dispatcher, registryAccess, environment) -> {
 
                     dispatcher.register(
                             Commands.literal("motd")
-                                    .then(
-        Commands.literal("help")
-                .executes(context -> {
 
-                    context.getSource().sendSuccess(
-                            () -> Component.literal(
-                                    "----- MOTD Help -----\n" +
-                                    "/motd set <message> - Sets the server MOTD\n" +
-                                    "/motd enable - Enables the custom MOTD\n" +
-                                    "/motd disable - Disables the custom MOTD\n" +
-                                    "/motd help - Shows this help message"
-                            ),
-                            false
-                    );
-
-                    return 1;
-                })
-)
-                                    
                                     // /motd set <message>
                                     .then(
                                             Commands.literal("set")
@@ -85,22 +72,14 @@ public class MessageOfTheDayMOTD implements ModInitializer {
                                                                                 );
 
                                                                         config.message = message;
-
                                                                         saveConfig();
 
-                                                                        applyMotd(
-                                                                                context.getSource()
-                                                                                        .getServer()
+                                                                        context.getSource().sendSuccess(
+                                                                                () -> Component.literal(
+                                                                                        "MOTD set to: " + message
+                                                                                ),
+                                                                                false
                                                                         );
-
-                                                                        context.getSource()
-                                                                                .sendSuccess(
-                                                                                        () -> Component.literal(
-                                                                                                "MOTD set to: "
-                                                                                                        + message
-                                                                                        ),
-                                                                                        false
-                                                                                );
 
                                                                         return 1;
                                                                     })
@@ -118,21 +97,14 @@ public class MessageOfTheDayMOTD implements ModInitializer {
                                                     .executes(context -> {
 
                                                         config.enabled = true;
-
                                                         saveConfig();
 
-                                                        applyMotd(
-                                                                context.getSource()
-                                                                        .getServer()
+                                                        context.getSource().sendSuccess(
+                                                                () -> Component.literal(
+                                                                        "MOTD enabled."
+                                                                ),
+                                                                false
                                                         );
-
-                                                        context.getSource()
-                                                                .sendSuccess(
-                                                                        () -> Component.literal(
-                                                                                "MOTD enabled."
-                                                                        ),
-                                                                        false
-                                                                );
 
                                                         return 1;
                                                     })
@@ -149,21 +121,34 @@ public class MessageOfTheDayMOTD implements ModInitializer {
                                                     .executes(context -> {
 
                                                         config.enabled = false;
-
                                                         saveConfig();
 
-                                                        applyMotd(
-                                                                context.getSource()
-                                                                        .getServer()
+                                                        context.getSource().sendSuccess(
+                                                                () -> Component.literal(
+                                                                        "MOTD disabled."
+                                                                ),
+                                                                false
                                                         );
 
-                                                        context.getSource()
-                                                                .sendSuccess(
-                                                                        () -> Component.literal(
-                                                                                "MOTD disabled."
-                                                                        ),
-                                                                        false
-                                                                );
+                                                        return 1;
+                                                    })
+                                    )
+
+                                    // /motd help
+                                    .then(
+                                            Commands.literal("help")
+                                                    .executes(context -> {
+
+                                                        context.getSource().sendSuccess(
+                                                                () -> Component.literal(
+                                                                        "----- MOTD Help -----\n" +
+                                                                        "/motd set <message> - Sets the join MOTD\n" +
+                                                                        "/motd enable - Enables the join MOTD\n" +
+                                                                        "/motd disable - Disables the join MOTD\n" +
+                                                                        "/motd help - Shows this help message"
+                                                                ),
+                                                                false
+                                                        );
 
                                                         return 1;
                                                     })
@@ -171,15 +156,6 @@ public class MessageOfTheDayMOTD implements ModInitializer {
                     );
                 }
         );
-    }
-
-    private static void applyMotd(MinecraftServer server) {
-
-        if (config.enabled) {
-            server.setMotd(config.message);
-        } else {
-            server.setMotd("");
-        }
     }
 
     private static void loadConfig() {
